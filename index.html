@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mmaah Hamburg HBF 3D</title>
+<meta name="description" content="Mmaah Hamburg Foodcourt im Hauptbahnhof, interaktives 3D Modell nach Grundriss">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0e0e10; --glas:rgba(20,20,24,.62); --rand:rgba(255,255,255,.12); --text:#f4f2ee; --dim:#a9a6a0; --rot:#C9161A; --orange:#FF4005; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family:Archivo, system-ui, sans-serif; overflow:hidden; }
+  canvas { display:block; touch-action:none; }
+  #kopf { position:fixed; top:max(14px, env(safe-area-inset-top)); left:16px; right:16px; display:flex; align-items:center; gap:12px; pointer-events:none; }
+  #kopf .marke { pointer-events:auto; background:var(--glas); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border:1px solid var(--rand);
+    border-radius:14px; padding:10px 14px; display:flex; align-items:center; gap:10px; }
+  #kopf .marke b { font-weight:900; letter-spacing:.02em; }
+  #kopf .marke span { color:var(--dim); font-size:13px; }
+  .punkt { width:10px; height:10px; border-radius:50%; background:var(--orange); box-shadow:0 0 12px var(--orange); }
+  #leiste { position:fixed; left:16px; right:16px; bottom:max(14px, env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:10px; pointer-events:none; }
+  .reihe { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; pointer-events:auto; padding-bottom:2px; }
+  .reihe::-webkit-scrollbar { display:none; }
+  button { font:inherit; font-size:13px; font-weight:700; color:var(--text); background:var(--glas); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--rand); border-radius:999px; padding:9px 14px; white-space:nowrap; cursor:pointer; transition:background .2s, border-color .2s; }
+  button:hover { border-color:rgba(255,255,255,.3); }
+  button.an { background:var(--rot); border-color:var(--rot); }
+  button.schalter.aus { color:var(--dim); }
+  .reihe .label { align-self:center; font-size:12px; font-weight:700; color:var(--dim); padding:0 4px 0 2px; letter-spacing:.06em; text-transform:uppercase; }
+  button.farbe { display:inline-flex; align-items:center; gap:8px; }
+  button.version.laedt { opacity:.55; }
+  button.farbe i { width:14px; height:14px; border-radius:50%; border:1px solid rgba(255,255,255,.5); display:inline-block; }
+  #hilfe { position:fixed; top:max(14px, env(safe-area-inset-top)); right:16px; color:var(--dim); font-size:12px; background:var(--glas); backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px); border:1px solid var(--rand); border-radius:12px; padding:9px 12px; line-height:1.45; max-width:250px; }
+  #laden { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; background:var(--bg); z-index:5; transition:opacity .6s; }
+  #laden .balken { width:min(320px, 70vw); height:4px; background:#26262a; border-radius:4px; overflow:hidden; }
+  #laden .balken i { display:block; height:100%; width:0; background:var(--orange); transition:width .2s; }
+  #laden small { color:var(--dim); }
+  @media (max-width:640px) { #hilfe { display:none; } #kopf .marke span { display:none; } button { font-size:12px; padding:8px 12px; } }
+</style>
+</head>
+<body>
+<div id="laden"><div style="font-weight:900;font-size:22px">Mmaah Hamburg HBF</div><div class="balken"><i id="fortschritt"></i></div><small id="status">Modell wird geladen</small></div>
+<div id="kopf"><div class="marke"><div class="punkt"></div><b>MMAAH HAMBURG HBF</b><span>Foodcourt Wandelhalle · 3D Modell nach Grundriss</span></div></div>
+<div id="hilfe">Ziehen: drehen<br>Rechts ziehen oder zwei Finger: verschieben<br>Mausrad oder zusammenziehen: zoomen<br>Doppelklick: dorthin schauen</div>
+<div id="leiste">
+  <div class="reihe" id="ansichten"></div>
+  <div class="reihe" id="schalter">
+    <button class="schalter" data-tag="decke">Decke Laden</button>
+    <button class="schalter" data-tag="hallendach">Hallendach</button>
+    <button class="schalter" data-tag="galerie">Galerie</button>
+    <button id="vonoben">Von oben</button>
+  </div>
+  <div class="reihe" id="vorhang">
+    <span class="label">Vorhang</span>
+    <button class="farbe vh an" data-farbe="#1561AB"><i style="background:#1561AB"></i>Blau</button>
+    <button class="farbe vh" data-farbe="#C9161A"><i style="background:#C9161A"></i>Rot</button>
+  </div>
+  <div class="reihe" id="folie">
+    <span class="label">Folie</span>
+    <button class="version an" data-v="original">Original</button>
+    <button class="version" data-v="v1">V1 Glasur Schwung</button>
+    <button class="version" data-v="v2">V2 Tropfen</button>
+    <button class="version" data-v="v3">V3 Fäden</button>
+    <button class="version" data-v="v4">V4 Hero</button>
+    <button class="version" data-v="v5">V5 Explosion</button>
+    <button class="version" data-v="v6">V6 Käse Pommes</button>
+    <button class="version" data-v="v7">V7 Sweet Chili</button>
+    <button class="version" data-v="v8">V8 Higgsfield Gruppe</button>
+    <button class="version" data-v="v9">V9 Higgsfield Hero</button>
+    <button class="version" data-v="v10">V10 Palast Explosion</button>
+    <button class="version" data-v="v11">V11 Händler</button>
+    <button class="version" data-v="v12">V12 Palasttor</button>
+    <button class="version" data-v="v13">V13 Käsewelle</button>
+    <button class="version" data-v="v14">V14 Klassisch</button>
+    <button class="version" data-v="v15">V15 Klassisch 2</button>
+  </div>
+</div>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const NAMEN = {
+  '01_Ecke_Nordost': 'Ecke Nordost', '02_Front_Nord': 'Front Nord', '03_Front_Ost_SOT': 'Front Ost mit SOTs', '04_Ueberblick_Galerie': 'Von der Galerie',
+  '06_Innen_Kochlinie': 'Kochlinie', '07_Innen_Tuer_zur_Theke': 'Tür zur Theke', '08_Innen_Rueckzeile': 'Rückzeile', '09_Flaeche3_Lettern': 'Fläche 3',
+  '10_Innen_Spuelzeile': 'Spülzeile', '11_Folie_Nord': 'Folie Nord', '12_Folie_Ost': 'Folie Ost'
+};
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.12;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+// Himmel über dem Glasdach: weicher Verlauf
+const himmel = document.createElement('canvas'); himmel.width = 2; himmel.height = 256;
+const hg = himmel.getContext('2d'); const grad = hg.createLinearGradient(0, 0, 0, 256);
+grad.addColorStop(0, '#7fa6d6'); grad.addColorStop(0.55, '#c9d9ea'); grad.addColorStop(1, '#e8e4dc');
+hg.fillStyle = grad; hg.fillRect(0, 0, 2, 256);
+const himmelTex = new THREE.CanvasTexture(himmel); himmelTex.colorSpace = THREE.SRGBColorSpace;
+scene.background = himmelTex;
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.03, 300);
+camera.position.set(10.6, 1.65, -4.6);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.target.set(3.9, 1.35, 1.6);
+controls.maxDistance = 60; controls.minDistance = 0.3;
+controls.zoomToCursor = true;
+controls.screenSpacePanning = true;
+
+const gruppen = {};
+const vorhangMats = [];   // PVC Streifenvorhang (blau oder rot umschaltbar)
+const druckMats = [];      // Hochglanz Druck der Folie Nord (Chicken Bites und Pommes)
+const folien = {};         // geladene Versionen, Original kommt aus dem Modell
+let folieWahl = 'original';
+const dekorMats = [];      // Glasdekor der Folie Nord (weißer Grund mit Linienzeichnung)
+// Versionen mit eigener Zeichnung im Glasdekor (komplett aus Higgsfield, tools/folie_higgsfield.py)
+const MIT_DEKOR = { v10: 'f6_v10_dekor', v11: 'f6_v11_dekor', v12: 'f6_v12_dekor', v13: 'f6_v13_dekor',
+                    v14: 'f6_v14_dekor', v15: 'f6_v15_dekor' };
+let ansichten = [], lmMax = 4;
+
+const fortschritt = document.getElementById('fortschritt');
+const status = document.getElementById('status');
+
+async function start() {
+  const info = await fetch('modell/ansichten.json').then(r => r.json());
+  ansichten = info.ansichten; lmMax = info.lmMax;
+  const lmTex = [];
+  const tl = new THREE.TextureLoader();
+  for (let i = 0; i < info.lightmaps; i++) {
+    const t = await tl.loadAsync(`modell/lm_${i}.jpg`);
+    t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.channel = 1;
+    t.minFilter = THREE.LinearMipmapLinearFilter; t.anisotropy = 4;
+    lmTex.push(t);
+  }
+  const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  const gltf = await loader.loadAsync('modell/laden.glb', e => {
+    if (e.total) fortschritt.style.width = (100 * e.loaded / e.total).toFixed(1) + '%';
+    status.textContent = 'Modell wird geladen ' + (e.loaded / 1e6).toFixed(1) + ' MB';
+  });
+  gltf.scene.traverse(o => {
+    if (!o.isMesh) return;
+    const tag = (o.userData && o.userData.tag) || (o.parent && o.parent.userData && o.parent.userData.tag) || 'laden';
+    (gruppen[tag] = gruppen[tag] || []).push(o);
+    const m = o.material;
+    const lm = m.userData ? m.userData.lightmap : -1;
+    const metall = m.userData ? (m.userData.metall || 0) : 0;
+    if (lm >= 0 && lmTex[lm]) {
+      m.lightMap = lmTex[lm];
+      m.lightMapIntensity = lmMax * Math.PI;
+      m.envMapIntensity = metall > 0.3 ? 0.9 : 0.12;
+    } else {
+      m.envMapIntensity = m.transparent ? 1.0 : 0.6;
+    }
+    if (m.name && m.name.startsWith('druck_f6') && !druckMats.includes(m)) druckMats.push(m);
+    if (m.name && m.name.startsWith('dekor_f6') && !dekorMats.includes(m)) dekorMats.push(m);
+    if (m.name && m.name.startsWith('pvc_lamelle') && !vorhangMats.includes(m)) vorhangMats.push(m);
+    // Hochglanz Sticker und Klarlack (rote Theke): Spiegelung sichtbar machen
+    if (m.clearcoat > 0) m.envMapIntensity = 0.75;
+    // weiße Buchstaben im Logo: nicht überstrahlen, sonst verschwimmen sie aus der Ferne zu einer weißen Fläche
+    if (m.name && m.name.startsWith('logo_weiss')) { m.emissive.set(0); m.lightMapIntensity *= 0.5; m.color.set('#e9e4dc'); }
+    // Glasdekor: satiniert, beidseitig, wenig Spiegelung, vor dem Klarglas zeichnen
+    if (m.name && m.name.startsWith('dekor')) { m.envMapIntensity = 0.35; m.side = THREE.DoubleSide; o.renderOrder = 1; }
+    if (m.transparent) { m.depthWrite = false; if (!o.renderOrder) o.renderOrder = 2; }
+    if (m.map) m.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  });
+  scene.add(gltf.scene);
+  window.hh = { scene, camera, controls, THREE };   // zum Prüfen in der Konsole
+  // ohne gebackene Lightmap (Glas) etwas Grundlicht
+  scene.add(new THREE.HemisphereLight(0xfff6ea, 0x8a8178, 0.35));
+  baueKnoepfe();
+  setzeAnsicht(ansichten[0], 0);
+  const l = document.getElementById('laden'); l.style.opacity = 0; setTimeout(() => l.remove(), 700);
+}
+
+function baueKnoepfe() {
+  const box = document.getElementById('ansichten');
+  ansichten.forEach((a, i) => {
+    const b = document.createElement('button');
+    b.textContent = NAMEN[a.name] || a.name;
+    b.onclick = () => { setzeAnsicht(a, 1.2); markiere(b); };
+    if (i === 0) b.classList.add('an');
+    box.appendChild(b);
+  });
+  document.querySelectorAll('.schalter').forEach(b => b.onclick = () => {
+    const aus = b.classList.toggle('aus');
+    (gruppen[b.dataset.tag] || []).forEach(o => o.visible = !aus);
+    if (b.dataset.tag === 'decke') (gruppen['fries'] || []).forEach(o => o.visible = !aus);
+  });
+  // Tresen seit 13.11.2026 nach Naders Vorlage (weiß geriffelt, hinterleuchtet), der Farbschalter Rot/Weiß/Anthrazit ist damit entfallen
+  // Streifenvorhang Blau oder Rot (Nader 13.11.2026), Lamellen sind transparent und ohne Lightmap, nur die Farbe wechselt
+  document.querySelectorAll('button.vh').forEach(b => b.onclick = () => {
+    vorhangMats.forEach(m => m.color.set(b.dataset.farbe));
+    document.querySelectorAll('button.vh').forEach(x => x.classList.toggle('an', x === b));
+  });
+  // Folie Nord in sechs Versionen (Nader 13.11.2026): nur der Hochglanz Druck wechselt, Glasdekor und Schrift bleiben
+  // V10 (komplett aus Higgsfield) bringt zusätzlich ein eigenes Glasdekor mit, die anderen nutzen das Seoul Dekor des Modells
+  if (druckMats[0]) folien.original = druckMats[0].map;
+  const dekorOriginal = dekorMats[0] ? { map: dekorMats[0].map, emissiveMap: dekorMats[0].emissiveMap } : null;
+  const laden = async (datei) => {
+    const t = await new THREE.TextureLoader().loadAsync(`modell/folien/${datei}.webp`);
+    t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return t;
+  };
+  document.querySelectorAll('button.version').forEach(b => b.onclick = async () => {
+    const v = b.dataset.v; folieWahl = v;
+    document.querySelectorAll('button.version').forEach(x => x.classList.toggle('an', x === b));
+    const dek = MIT_DEKOR[v];
+    if (!folien[v] || (dek && !folien[dek])) {
+      b.classList.add('laedt');
+      try {
+        if (!folien[v]) folien[v] = await laden(`f6_${v}`);
+        if (dek && !folien[dek]) folien[dek] = await laden(dek);
+      } finally { b.classList.remove('laedt'); }
+    }
+    if (folieWahl !== v) return;  // inzwischen andere Version gewählt
+    druckMats.forEach(m => { m.map = folien[v]; m.needsUpdate = true; });
+    if (dekorOriginal) dekorMats.forEach(m => {
+      m.map = dek ? folien[dek] : dekorOriginal.map;
+      if (dekorOriginal.emissiveMap) m.emissiveMap = dek ? folien[dek] : dekorOriginal.emissiveMap;
+      m.needsUpdate = true;
+    });
+  });
+  document.getElementById('vonoben').onclick = () => {
+    ['decke', 'hallendach', 'galerie'].forEach(t => {
+      (gruppen[t] || []).forEach(o => o.visible = false);
+      document.querySelector(`.schalter[data-tag="${t}"]`).classList.add('aus');
+    });
+    (gruppen['fries'] || []).forEach(o => o.visible = false);
+    setzeAnsicht({ pos: [3.05, 12.5, 2.4], ziel: [3.05, 0, 2.2], fov: 45 }, 1.2);
+    markiere(null);
+  };
+}
+
+function markiere(b) { document.querySelectorAll('#ansichten button').forEach(x => x.classList.toggle('an', x === b)); }
+
+let flug = null;
+function fovFuer(f) { const asp = innerWidth / innerHeight; return asp < 1 ? Math.min(85, (f || 50) * (1 + (1 - asp) * 0.9)) : (f || 50); }
+function setzeAnsicht(a, dauer) {
+  const p1 = new THREE.Vector3(...a.pos), z1 = new THREE.Vector3(...a.ziel);
+  a = Object.assign({}, a, { fov: fovFuer(a.fov) });
+  if (!dauer) { camera.position.copy(p1); controls.target.copy(z1); camera.fov = a.fov || 50; camera.updateProjectionMatrix(); return; }
+  flug = { t: 0, dauer, p0: camera.position.clone(), z0: controls.target.clone(), p1, z1, f0: camera.fov, f1: a.fov || 50 };
+}
+
+// Doppelklick: dorthin schauen
+const ray = new THREE.Raycaster();
+renderer.domElement.addEventListener('dblclick', e => {
+  const v = new THREE.Vector2(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(v, camera);
+  const hit = ray.intersectObjects(scene.children, true).find(h => h.object.visible && !h.object.material.transparent);
+  if (hit) flug = { t: 0, dauer: 0.8, p0: camera.position.clone(), z0: controls.target.clone(),
+    p1: camera.position.clone().lerp(hit.point, 0.35), z1: hit.point.clone(), f0: camera.fov, f1: camera.fov };
+});
+
+const uhr = new THREE.Clock();
+function schleife() {
+  const dt = Math.min(uhr.getDelta(), 0.05);
+  if (flug) {
+    flug.t += dt / flug.dauer;
+    const k = flug.t >= 1 ? 1 : 1 - Math.pow(1 - flug.t, 3);
+    camera.position.lerpVectors(flug.p0, flug.p1, k);
+    controls.target.lerpVectors(flug.z0, flug.z1, k);
+    camera.fov = flug.f0 + (flug.f1 - flug.f0) * k; camera.updateProjectionMatrix();
+    if (flug.t >= 1) flug = null;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(schleife);
+}
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+start().catch(e => { status.textContent = 'Fehler beim Laden: ' + e.message; console.error(e); });
+schleife();
+</script>
+</body>
+</html>
